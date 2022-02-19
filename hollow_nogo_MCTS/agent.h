@@ -124,6 +124,11 @@ public:
 			return win_rate() + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
+		float ucb_opponent(){
+			float c = 1.5;
+			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
+		}
+
 		action MCTS(int N, std::default_random_engine& engine){
 			// 1. select  2. expand  3. simulate  4. back propagate
 
@@ -133,7 +138,7 @@ public:
 
 				// select
 				debug << "select" << std::endl;
-				std::vector<node*> path = select_root_to_leaf();
+				std::vector<node*> path = select_root_to_leaf(info().who_take_turns);
 				// expand
 				debug << "expand" << std::endl;
 				node* leaf = path.back();
@@ -173,7 +178,7 @@ public:
 			return action::place(c->info().move, info().who_take_turns);
 		}
 
-		std::vector<node*> select_root_to_leaf(){
+		std::vector<node*> select_root_to_leaf(unsigned who){
 			std::vector<node*> vec;
 			node* curr = this;
 			vec.push_back(curr);
@@ -185,7 +190,13 @@ public:
 					break;
 				}
 				for(int i = 0; i < curr->child.size(); ++i){
-					float tmp = curr->child[i]->ucb();
+					float tmp;
+					if(who == curr->info().who_take_turns){
+						tmp = curr->child[i]->ucb();
+					}else{
+						tmp = curr->child[i]->ucb_opponent();
+					}
+					
 					if(tmp > max_score){
 						max_score = tmp;
 						c = curr->child[i];
