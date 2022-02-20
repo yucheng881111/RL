@@ -117,21 +117,29 @@ public:
 
 		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr) {}
 
-		float win_rate(){
+		float win_rate(std::vector<int> &rave_total, std::vector<int> &rave_win){
+			// Q = win_rate
+			// RAVE: select child node who has the highest Q* score
+			// Q* = 0.5 * Q + 0.5 * ~Q
+			//    = 0.5 * win_rate + 0.5 * rave_win_rate
+
 			if(win_cnt == 0 && total_cnt == 0){
 				return 0.0;
 			}
-			return (float)win_cnt / total_cnt;
+			//std::fstream debug("record.txt", std::ios::app);
+			//debug << (float)win_cnt / total_cnt << " " << (float)rave_win[place_pos] / rave_total[place_pos] << std::endl;
+			//debug.close();
+			return 0.5 * ((float)win_cnt / total_cnt) + 0.5 * ((float)rave_win[place_pos] / rave_total[place_pos]);
 		}
 
-		float ucb(){
+		float ucb(std::vector<int> &rave_total, std::vector<int> &rave_win){
 			float c = 1.5;
-			return win_rate() + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
+			return win_rate(rave_total, rave_win) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
-		float ucb_opponent(){
+		float ucb_opponent(std::vector<int> &rave_total, std::vector<int> &rave_win){
 			float c = 1.5;
-			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
+			return (1 - win_rate(rave_total, rave_win)) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
 		action MCTS(int N, std::default_random_engine& engine, std::vector<int> &rave_total, std::vector<int> &rave_win){
@@ -143,7 +151,7 @@ public:
 
 				// select
 				//debug << "select" << std::endl;
-				std::vector<node*> path = select_root_to_leaf(info().who_take_turns);
+				std::vector<node*> path = select_root_to_leaf(info().who_take_turns, rave_total, rave_win);
 				// expand
 				//debug << "expand" << std::endl;
 				node* leaf = path.back();
@@ -165,11 +173,7 @@ public:
 		}
 
 		action select_action(std::vector<int> &rave_total, std::vector<int> &rave_win){
-			// select child node who has the highest win rate
-			// RAVE: select child node who has the highest Q* score
-			// Q* = 0.5 * Q + 0.5 * ~Q
-			//    = 0.5 * win_rate + 0.5 * rave_win_rate
-
+			// select child node who has the highest win rate (highest Q)
 			if(child.size() == 0){
 				return action();
 			}
@@ -177,11 +181,7 @@ public:
 			float max_score = -std::numeric_limits<float>::max();
 			node* c;
 			for(int i = 0; i < child.size(); ++i){
-				//float tmp = child[i]->win_rate();
-				float tmp = 0.5 * (child[i]->win_rate()) + 0.5 * ((float)rave_win[child[i]->place_pos] / rave_total[child[i]->place_pos]);
-				std::fstream debug("record.txt", std::ios::app);
-				debug << child[i]->win_rate() << " " << (float)rave_win[child[i]->place_pos] / rave_total[child[i]->place_pos] << std::endl;
-				debug.close();
+				float tmp = child[i]->win_rate(rave_total, rave_win);
 				if(tmp > max_score){
 					max_score = tmp;
 					c = child[i];
@@ -191,7 +191,7 @@ public:
 			return action::place(c->place_pos, info().who_take_turns);
 		}
 
-		std::vector<node*> select_root_to_leaf(unsigned who){
+		std::vector<node*> select_root_to_leaf(unsigned who, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			std::vector<node*> vec;
 			node* curr = this;
 			vec.push_back(curr);
@@ -205,9 +205,9 @@ public:
 				for(int i = 0; i < curr->child.size(); ++i){
 					float tmp;
 					if(who == curr->info().who_take_turns){
-						tmp = curr->child[i]->ucb();
+						tmp = curr->child[i]->ucb(rave_total, rave_win);
 					}else{
-						tmp = curr->child[i]->ucb_opponent();
+						tmp = curr->child[i]->ucb_opponent(rave_total, rave_win);
 					}
 					
 					if(tmp > max_score){
