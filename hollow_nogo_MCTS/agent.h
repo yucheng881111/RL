@@ -91,7 +91,11 @@ public:
 	virtual action take_action(const board& state) {
 		int N = meta["N"];
 		if(N){
-			return node(state).MCTS(N, engine);
+			rave_total.clear();
+			rave_win.clear();
+			rave_total.assign(81, 0);
+			rave_win.assign(81, 0);
+			return node(state).MCTS(N, engine, rave_total, rave_win);
 		}
 
 		std::shuffle(space.begin(), space.end(), engine);
@@ -130,38 +134,42 @@ public:
 			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
-		action MCTS(int N, std::default_random_engine& engine){
+		action MCTS(int N, std::default_random_engine& engine, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// 1. select  2. expand  3. simulate  4. back propagate
 
 			for(int i = 0; i < N; ++i){
 				// debug
-				std::fstream debug("record.txt", std::ios::app);
+				//std::fstream debug("record.txt", std::ios::app);
 
 				// select
-				debug << "select" << std::endl;
+				//debug << "select" << std::endl;
 				std::vector<node*> path = select_root_to_leaf(info().who_take_turns);
 				// expand
-				debug << "expand" << std::endl;
+				//debug << "expand" << std::endl;
 				node* leaf = path.back();
 				node* expand_node = leaf->expand_from_leaf(engine);
 				if(expand_node != leaf){
 					path.push_back(expand_node);
 				}
 				// simulate
-				debug << "simulate" << std::endl;
+				//debug << "simulate" << std::endl;
 				unsigned winner = path.back()->simulate_winner(engine);
 				// backpropagate
-				debug << "backpropagate" << std::endl;
-				back_propagate(path, winner);
+				//debug << "backpropagate" << std::endl;
+				back_propagate(path, winner, rave_total, rave_win);
 
-				debug.close();
+				//debug.close();
 			}
 
-			return select_action();
+			return select_action(rave_total, rave_win);
 		}
 
-		action select_action(){
+		action select_action(std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// select child node who has the highest win rate
+			// RAVE: select child node who has the highest Q* score
+			// Q* = 0.5 * Q + 0.5 * ~Q
+			//    = 0.5 * win_rate + 0.5 * rave_win_rate
+
 			if(child.size() == 0){
 				return action();
 			}
@@ -169,7 +177,11 @@ public:
 			float max_score = -std::numeric_limits<float>::max();
 			node* c;
 			for(int i = 0; i < child.size(); ++i){
-				float tmp = child[i]->win_rate();
+				//float tmp = child[i]->win_rate();
+				float tmp = 0.5 * (child[i]->win_rate()) + 0.5 * ((float)rave_win[child[i]->place_pos] / rave_total[child[i]->place_pos]);
+				std::fstream debug("record.txt", std::ios::app);
+				debug << child[i]->win_rate() << " " << (float)rave_win[child[i]->place_pos] / rave_total[child[i]->place_pos] << std::endl;
+				debug.close();
 				if(tmp > max_score){
 					max_score = tmp;
 					c = child[i];
@@ -280,18 +292,21 @@ public:
 			return vec;
 		}
 
-		void back_propagate(std::vector<node*>& path, unsigned winner){
+		void back_propagate(std::vector<node*>& path, unsigned winner, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			for(int i = 0; i < path.size(); ++i){
 				path[i]->total_cnt++;
+				rave_total[path[i]->place_pos]++;
 				if(winner == info().who_take_turns){
+					rave_win[path[i]->place_pos]++;
 					path[i]->win_cnt++;
 				}
 			}
 		}
 	};
 
-
 private:
 	std::vector<action::place> space;
 	board::piece_type who;
+	std::vector<int> rave_total;
+	std::vector<int> rave_win;
 };
