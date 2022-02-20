@@ -1,0 +1,25 @@
+B<< HollowNoGo-Judge: /home/yucheng/Documents/AI/RL/hollow_nogo_MCTS/./nogo-judge --shell --name=Judge-Weak-Black --black=weak 
+B>> protocol_version
+B<< 
+B<< = 2
+B<< 
+B>> name
+B<< = Judge-Weak-Black
+B<< 
+B>> version
+B<< = 2021
+B<< 
+B>> list_commands
+B<< = play
+B<< genmove
+B<< clear_board
+B<< showboard
+B<< boardsize
+B<< name
+B<< version
+B<< protocol_version
+B<< list_commands
+B<< quit
+B<< 
+B<< 
+Cannot run program "./nogo": error=2, No such file or directory

@@ -107,10 +107,11 @@ public:
 	public:
 		int win_cnt;
 		int total_cnt;
+		int place_pos;
 		std::vector<node*> child;
 		node* parent;
 
-		node(const board& state): board(state), win_cnt(0), total_cnt(0), parent(nullptr) {}
+		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr) {}
 
 		float win_rate(){
 			if(win_cnt == 0 && total_cnt == 0){
@@ -174,8 +175,8 @@ public:
 					c = child[i];
 				}
 			}
-
-			return action::place(c->info().move, info().who_take_turns);
+			
+			return action::place(c->place_pos, info().who_take_turns);
 		}
 
 		std::vector<node*> select_root_to_leaf(unsigned who){
@@ -224,15 +225,17 @@ public:
 			board b = *this;
 			std::vector<int> vec = all_space(engine);
 			bool success_placed = 0;
+			int pos = -1;
 			for(int i = 0; i < vec.size(); ++i){
 				if(b.place(vec[i]) == board::legal){
+					pos = vec[i];
 					success_placed = 1;
 					break;
 				}
 			}
 
 			if(success_placed){
-				node* new_node = new node(b);
+				node* new_node = new node(b, pos);
 				this->child.push_back(new_node);
 				new_node->parent = this;
 				return new_node;
