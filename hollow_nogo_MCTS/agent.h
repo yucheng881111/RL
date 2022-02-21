@@ -114,22 +114,23 @@ public:
 		int place_pos;
 		std::vector<node*> child;
 		node* parent;
+		float RAVE_Beta;
 
-		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr) {}
+		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr), RAVE_Beta(0.5) {}
 
 		float win_rate(std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// Q = win_rate
 			// RAVE: select child node who has the highest Q* score
-			// Q* = 0.5 * Q + 0.5 * ~Q
-			//    = 0.5 * win_rate + 0.5 * rave_win_rate
+			// Q* = (1 - RAVE_Beta) * Q + RAVE_Beta * ~Q
+			//    = (1 - RAVE_Beta) * win_rate + RAVE_Beta * rave_win_rate
 
 			if(win_cnt == 0 && total_cnt == 0){
 				return 0.0;
 			}
-			//std::fstream debug("record.txt", std::ios::app);
-			//debug << (float)win_cnt / total_cnt << " " << (float)rave_win[place_pos] / rave_total[place_pos] << std::endl;
-			//debug.close();
-			return 0.5 * ((float)win_cnt / total_cnt) + 0.5 * ((float)rave_win[place_pos] / rave_total[place_pos]);
+			
+			// without RAVE (Beta == 0)
+			// return (float)win_cnt / total_cnt;
+			return (1 - RAVE_Beta) * ((float)win_cnt / total_cnt) + RAVE_Beta * ((float)rave_win[place_pos] / rave_total[place_pos]);
 		}
 
 		float ucb(std::vector<int> &rave_total, std::vector<int> &rave_win){
@@ -144,7 +145,7 @@ public:
 
 		action MCTS(int N, std::default_random_engine& engine, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// 1. select  2. expand  3. simulate  4. back propagate
-
+			
 			for(int i = 0; i < N; ++i){
 				// debug
 				//std::fstream debug("record.txt", std::ios::app);
