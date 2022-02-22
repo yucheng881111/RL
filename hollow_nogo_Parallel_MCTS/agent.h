@@ -167,7 +167,7 @@ public:
 			float c = 1.5;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
-				return win_rate();
+				return 1 - win_rate();
 			}
 
 			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
