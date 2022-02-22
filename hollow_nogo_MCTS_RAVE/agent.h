@@ -19,7 +19,6 @@
 #include <fstream>
 
 #include <bits/stdc++.h>
-#include <omp.h>
 
 class agent {
 public:
@@ -92,38 +91,11 @@ public:
 	virtual action take_action(const board& state) {
 		int N = meta["N"];
 		if(N){
-			// root parallelizing
-			int thread_num = omp_get_num_procs();
-			omp_set_num_threads(thread_num);
-			std::vector<int> majority_vote(thread_num, 0);
-
-			#pragma omp parallel
-			{
-				int id = omp_get_thread_num();
-				int vote_move = node(state).MCTS(N, engine);
-				majority_vote[id] = vote_move;
-			}
-
-			// debug
-			//std::fstream debug("record.txt", std::ios::app);
-			std::vector<int> vote_result(81, 0);
-			for(auto &v : majority_vote){
-				//debug << v << " ";
-				if(v != -1){
-					vote_result[v]++;
-				}
-			}
-			
-			//debug << std::endl;
-			//debug.close();
-
-			std::vector<int>::iterator iter = max_element(vote_result.begin(), vote_result.end());
-			if((*iter) == 0){
-				return action();
-			}
-
-			int result = iter - vote_result.begin();
-			return action::place(result, state.info().who_take_turns);
+			rave_total.clear();
+			rave_win.clear();
+			rave_total.assign(81, 0);
+			rave_win.assign(81, 0);
+			return node(state).MCTS(N, engine, rave_total, rave_win);
 		}
 
 		std::shuffle(space.begin(), space.end(), engine);
@@ -142,47 +114,55 @@ public:
 		int place_pos;
 		std::vector<node*> child;
 		node* parent;
+		float RAVE_Beta;
 
-		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr) {}
+		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr), RAVE_Beta(0.5) {}
 
-		float win_rate(){
+		float win_rate(std::vector<int> &rave_total, std::vector<int> &rave_win){
+			// Q = win_rate
+			// RAVE (AMAF): select child node who has the highest Q* score
+			// Q* = (1 - RAVE_Beta) * Q + RAVE_Beta * ~Q
+			//    = (1 - RAVE_Beta) * win_rate + RAVE_Beta * rave_win_rate
+
 			if(win_cnt == 0 && total_cnt == 0){
 				return 0.0;
 			}
 			
-			return (float)win_cnt / total_cnt;
+			// without RAVE (Beta == 0)
+			// return (float)win_cnt / total_cnt;
+			return (1 - RAVE_Beta) * ((float)win_cnt / total_cnt) + RAVE_Beta * ((float)rave_win[place_pos] / rave_total[place_pos]);
 		}
 
-		float ucb(){
+		float ucb(std::vector<int> &rave_total, std::vector<int> &rave_win){
 			float c = 1.5;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
-				return win_rate();
+				return win_rate(rave_total, rave_win);
+			}
+
+			return win_rate(rave_total, rave_win) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
+		}
+
+		float ucb_opponent(std::vector<int> &rave_total, std::vector<int> &rave_win){
+			float c = 1.5;
+
+			if(parent->total_cnt == 0 || total_cnt == 0){
+				return win_rate(rave_total, rave_win);
 			}
 			
-			return win_rate() + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
+			return (1 - win_rate(rave_total, rave_win)) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
-		float ucb_opponent(){
-			float c = 1.5;
-
-			if(parent->total_cnt == 0 || total_cnt == 0){
-				return win_rate();
-			}
-
-			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
-		}
-
-		int MCTS(int N, std::default_random_engine& engine){
+		action MCTS(int N, std::default_random_engine& engine, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// 1. select  2. expand  3. simulate  4. back propagate
-
-			// debug
-			//std::fstream debug("record.txt", std::ios::app);
 			
 			for(int i = 0; i < N; ++i){
+				// debug
+				//std::fstream debug("record.txt", std::ios::app);
+
 				// select
 				//debug << "select" << std::endl;
-				std::vector<node*> path = select_root_to_leaf(info().who_take_turns);
+				std::vector<node*> path = select_root_to_leaf(info().who_take_turns, rave_total, rave_win);
 				// expand
 				//debug << "expand" << std::endl;
 				node* leaf = path.back();
@@ -195,14 +175,15 @@ public:
 				unsigned winner = path.back()->simulate_winner(engine);
 				// backpropagate
 				//debug << "backpropagate" << std::endl;
-				back_propagate(path, winner);
+				back_propagate(path, winner, rave_total, rave_win);
+
+				//debug.close();
 			}
 
-			//debug.close();
-			return select_action();
+			return select_action(rave_total, rave_win);
 		}
 
-		int select_action(){
+		action select_action(std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// select child node who has the highest win rate (highest Q)
 			if(child.size() == 0){
 				return action();
@@ -211,18 +192,17 @@ public:
 			float max_score = -std::numeric_limits<float>::max();
 			node* c;
 			for(int i = 0; i < child.size(); ++i){
-				float tmp = child[i]->win_rate();
+				float tmp = child[i]->win_rate(rave_total, rave_win);
 				if(tmp > max_score){
 					max_score = tmp;
 					c = child[i];
 				}
 			}
 			
-			//return action::place(c->place_pos, info().who_take_turns);
-			return c->place_pos;
+			return action::place(c->place_pos, info().who_take_turns);
 		}
 
-		std::vector<node*> select_root_to_leaf(unsigned who){
+		std::vector<node*> select_root_to_leaf(unsigned who, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			std::vector<node*> vec;
 			node* curr = this;
 			vec.push_back(curr);
@@ -236,9 +216,9 @@ public:
 				for(int i = 0; i < curr->child.size(); ++i){
 					float tmp;
 					if(who == curr->info().who_take_turns){
-						tmp = curr->child[i]->ucb();
+						tmp = curr->child[i]->ucb(rave_total, rave_win);
 					}else{
-						tmp = curr->child[i]->ucb_opponent();
+						tmp = curr->child[i]->ucb_opponent(rave_total, rave_win);
 					}
 					
 					if(tmp > max_score){
@@ -323,10 +303,12 @@ public:
 			return vec;
 		}
 
-		void back_propagate(std::vector<node*>& path, unsigned winner){
+		void back_propagate(std::vector<node*>& path, unsigned winner, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			for(int i = 0; i < path.size(); ++i){
 				path[i]->total_cnt++;
+				rave_total[path[i]->place_pos]++;
 				if(winner == info().who_take_turns){
+					rave_win[path[i]->place_pos]++;
 					path[i]->win_cnt++;
 				}
 			}
@@ -336,4 +318,6 @@ public:
 private:
 	std::vector<action::place> space;
 	board::piece_type who;
+	std::vector<int> rave_total;
+	std::vector<int> rave_win;
 };
