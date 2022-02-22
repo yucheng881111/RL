@@ -97,23 +97,25 @@ public:
 			omp_set_num_threads(thread_num);
 			std::vector<int> majority_vote(thread_num, 0);
 
+			//std::fstream debug("record.txt", std::ios::app);
+
 			#pragma omp parallel
 			{
 				int id = omp_get_thread_num();
-				int vote_move = node(state).MCTS(N, engine);
+				node* root = new node(state);
+				int vote_move = root->MCTS(N, engine);
+				delete_tree(root);
 				majority_vote[id] = vote_move;
 			}
 
-			// debug
-			//std::fstream debug("record.txt", std::ios::app);
 			std::vector<int> vote_result(81, 0);
 			for(auto &v : majority_vote){
-				//debug << v << " ";
 				if(v != -1){
+					//debug << v << " ";
 					vote_result[v]++;
 				}
 			}
-			
+
 			//debug << std::endl;
 			//debug.close();
 
@@ -154,7 +156,7 @@ public:
 		}
 
 		float ucb(){
-			float c = 1.5;
+			float c = 1;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return win_rate();
@@ -164,7 +166,7 @@ public:
 		}
 
 		float ucb_opponent(){
-			float c = 1.5;
+			float c = 1;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return 1 - win_rate();
@@ -332,6 +334,18 @@ public:
 			}
 		}
 	};
+
+	void delete_tree(node* root){
+		if(root->child.size() == 0 || root->child[0] == nullptr){
+			delete root;
+			return ;
+		}
+
+		for(int i = 0; i < root->child.size(); ++i){
+			delete_tree(root->child[i]);
+		}
+
+	}
 
 private:
 	std::vector<action::place> space;

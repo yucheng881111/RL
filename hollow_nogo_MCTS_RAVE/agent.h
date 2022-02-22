@@ -134,7 +134,7 @@ public:
 		}
 
 		float ucb(std::vector<int> &rave_total, std::vector<int> &rave_win){
-			float c = 1.5;
+			float c = 1;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return win_rate(rave_total, rave_win);
@@ -144,7 +144,7 @@ public:
 		}
 
 		float ucb_opponent(std::vector<int> &rave_total, std::vector<int> &rave_win){
-			float c = 1.5;
+			float c = 1;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return 1 - win_rate(rave_total, rave_win);
