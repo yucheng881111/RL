@@ -95,7 +95,14 @@ public:
 			rave_win.clear();
 			rave_total.assign(81, 0);
 			rave_win.assign(81, 0);
-			return node(state).MCTS(N, engine, rave_total, rave_win);
+			node* root = new node(state);
+			int result = root->MCTS(N, engine, rave_total, rave_win);
+			delete_tree(root);
+			if(result != -1){
+				return action::place(result, state.info().who_take_turns);
+			}else{
+				return action();
+			}
 		}
 
 		std::shuffle(space.begin(), space.end(), engine);
@@ -153,7 +160,7 @@ public:
 			return (1 - win_rate(rave_total, rave_win)) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
-		action MCTS(int N, std::default_random_engine& engine, std::vector<int> &rave_total, std::vector<int> &rave_win){
+		int MCTS(int N, std::default_random_engine& engine, std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// 1. select  2. expand  3. simulate  4. back propagate
 			
 			for(int i = 0; i < N; ++i){
@@ -183,10 +190,10 @@ public:
 			return select_action(rave_total, rave_win);
 		}
 
-		action select_action(std::vector<int> &rave_total, std::vector<int> &rave_win){
+		int select_action(std::vector<int> &rave_total, std::vector<int> &rave_win){
 			// select child node who has the highest win rate (highest Q)
 			if(child.size() == 0){
-				return action();
+				return -1;
 			}
 
 			float max_score = -std::numeric_limits<float>::max();
@@ -199,7 +206,7 @@ public:
 				}
 			}
 			
-			return action::place(c->place_pos, info().who_take_turns);
+			return c->place_pos;
 		}
 
 		std::vector<node*> select_root_to_leaf(unsigned who, std::vector<int> &rave_total, std::vector<int> &rave_win){
@@ -314,6 +321,21 @@ public:
 			}
 		}
 	};
+
+	void delete_tree(node* root){
+		if(root->child.size() == 0){
+			delete root;
+			return ;
+		}
+
+		for(int i = 0; i < root->child.size(); ++i){
+			if(root->child[i] != nullptr){
+				delete_tree(root->child[i]);
+			}
+		}
+
+		delete root;
+	}
 
 private:
 	std::vector<action::place> space;

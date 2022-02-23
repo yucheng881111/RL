@@ -207,7 +207,7 @@ public:
 		int select_action(){
 			// select child node who has the highest win rate (highest Q)
 			if(child.size() == 0){
-				return action();
+				return -1;
 			}
 
 			float max_score = -std::numeric_limits<float>::max();
@@ -220,7 +220,6 @@ public:
 				}
 			}
 			
-			//return action::place(c->place_pos, info().who_take_turns);
 			return c->place_pos;
 		}
 
@@ -336,15 +335,18 @@ public:
 	};
 
 	void delete_tree(node* root){
-		if(root->child.size() == 0 || root->child[0] == nullptr){
+		if(root->child.size() == 0){
 			delete root;
 			return ;
 		}
 
 		for(int i = 0; i < root->child.size(); ++i){
-			delete_tree(root->child[i]);
+			if(root->child[i] != nullptr){
+				delete_tree(root->child[i]);
+			}
 		}
 
+		delete root;
 	}
 
 private:

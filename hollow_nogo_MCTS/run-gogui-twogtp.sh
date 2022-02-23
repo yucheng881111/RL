@@ -1,11 +1,11 @@
 #!/bin/bash
 echo "GoGui-TwoGTP Launcher V20211112"
 # commands for player 1
-P1B='./nogo --shell --name="Hollow-Black" --black="mcts N=200"'
-P1W='./nogo --shell --name="Hollow-White" --white="mcts N=200"'
+P1B='./nogo_inverse --shell --name="Hollow-Black" --black="mcts N=5000"'
+P1W='./nogo_inverse --shell --name="Hollow-White" --white="mcts N=5000"'
 # commands for local player 2
-P2B='./nogo-judge --shell --name="Judge-Weak-Black" --black="weak"'
-P2W='./nogo-judge --shell --name="Judge-Weak-White" --white="weak"'
+P2B='./nogo_normal --shell --name="Normal-Black" --black="mcts N=5000"'
+P2W='./nogo_normal --shell --name="Normal-White" --white="mcts N=5000"'
 # commands for local random player
 #P2B='./nogo --shell --name="Random-Black" --black="mcts N=0"'
 #P2W='./nogo --shell --name="Random-White" --white="mcts N=0"'

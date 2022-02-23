@@ -91,7 +91,14 @@ public:
 	virtual action take_action(const board& state) {
 		int N = meta["N"];
 		if(N){
-			return node(state).MCTS(N, engine);
+			node* root = new node(state);
+			int result = root->MCTS(N, engine);
+			delete_tree(root);
+			if(result != -1){
+				return action::place(result, state.info().who_take_turns);
+			}else{
+				return action();
+			}
 		}
 
 		std::shuffle(space.begin(), space.end(), engine);
@@ -122,7 +129,7 @@ public:
 		}
 
 		float ucb(){
-			float c = 0.1;
+			float c = 0.5;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return win_rate();
@@ -132,7 +139,7 @@ public:
 		}
 
 		float ucb_opponent(){
-			float c = 0.1;
+			float c = 0.5;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return 1 - win_rate();
@@ -141,7 +148,7 @@ public:
 			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
-		action MCTS(int N, std::default_random_engine& engine){
+		int MCTS(int N, std::default_random_engine& engine){
 			// 1. select  2. expand  3. simulate  4. back propagate
 			
 			for(int i = 0; i < N; ++i){
@@ -171,10 +178,10 @@ public:
 			return select_action();
 		}
 
-		action select_action(){
+		int select_action(){
 			// select child node who has the highest win rate (highest Q)
 			if(child.size() == 0){
-				return action();
+				return -1;
 			}
 
 			float max_score = -std::numeric_limits<float>::max();
@@ -187,7 +194,7 @@ public:
 				}
 			}
 			
-			return action::place(c->place_pos, info().who_take_turns);
+			return c->place_pos;
 		}
 
 		std::vector<node*> select_root_to_leaf(unsigned who, std::default_random_engine& engine){
@@ -303,6 +310,22 @@ public:
 			}
 		}
 	};
+
+	void delete_tree(node* root){
+		if(root->child.size() == 0){
+			delete root;
+			return ;
+		}
+
+		for(int i = 0; i < root->child.size(); ++i){
+			if(root->child[i] != nullptr){
+				delete_tree(root->child[i]);
+			}
+		}
+
+		delete root;
+	}
+
 
 private:
 	std::vector<action::place> space;
