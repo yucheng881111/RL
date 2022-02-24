@@ -77,7 +77,7 @@ protected:
  */
 class player : public random_agent {
 public:
-	player(const std::string& args = "") : random_agent("name=random role=unknown N=0 " + args),
+	player(const std::string& args = "") : random_agent("name=random role=unknown N=0 c=0 " + args),
 		space(board::size_x * board::size_y), who(board::empty) {
 		if (name().find_first_of("[]():; ") != std::string::npos)
 			throw std::invalid_argument("invalid name: " + name());
@@ -91,6 +91,7 @@ public:
 
 	virtual action take_action(const board& state) {
 		int N = meta["N"];
+		float c = meta["c"];
 		if(N){
 			// root parallelizing
 			int thread_num = omp_get_num_procs();
@@ -103,7 +104,7 @@ public:
 			{
 				int id = omp_get_thread_num();
 				node* root = new node(state);
-				int vote_move = root->MCTS(N, engine);
+				int vote_move = root->MCTS(N, engine, c);
 				delete_tree(root);
 				majority_vote[id] = vote_move;
 			}
@@ -155,9 +156,7 @@ public:
 			return (float)win_cnt / total_cnt;
 		}
 
-		float ucb(){
-			float c = 0.05;
-
+		float ucb(float c){
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return win_rate();
 			}
@@ -165,9 +164,7 @@ public:
 			return win_rate() + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
-		float ucb_opponent(){
-			float c = 0.05;
-
+		float ucb_opponent(float c){
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return 1 - win_rate();
 			}
@@ -175,7 +172,7 @@ public:
 			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
-		int MCTS(int N, std::default_random_engine& engine){
+		int MCTS(int N, std::default_random_engine& engine, float ucb_c){
 			// 1. select  2. expand  3. simulate  4. back propagate
 
 			// debug
@@ -184,7 +181,7 @@ public:
 			for(int i = 0; i < N; ++i){
 				// select
 				//debug << "select" << std::endl;
-				std::vector<node*> path = select_root_to_leaf(info().who_take_turns);
+				std::vector<node*> path = select_root_to_leaf(info().who_take_turns, ucb_c);
 				// expand
 				//debug << "expand" << std::endl;
 				node* leaf = path.back();
@@ -223,7 +220,7 @@ public:
 			return c->place_pos;
 		}
 
-		std::vector<node*> select_root_to_leaf(unsigned who){
+		std::vector<node*> select_root_to_leaf(unsigned who, float ucb_c){
 			std::vector<node*> vec;
 			node* curr = this;
 			vec.push_back(curr);
@@ -237,9 +234,9 @@ public:
 				for(int i = 0; i < curr->child.size(); ++i){
 					float tmp;
 					if(who == curr->info().who_take_turns){
-						tmp = curr->child[i]->ucb();
+						tmp = curr->child[i]->ucb(ucb_c);
 					}else{
-						tmp = curr->child[i]->ucb_opponent();
+						tmp = curr->child[i]->ucb_opponent(ucb_c);
 					}
 					
 					if(tmp > max_score){
