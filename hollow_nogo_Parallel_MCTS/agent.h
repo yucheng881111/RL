@@ -156,7 +156,7 @@ public:
 		}
 
 		float ucb(){
-			float c = 1.5;
+			float c = 0.05;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return win_rate();
@@ -166,7 +166,7 @@ public:
 		}
 
 		float ucb_opponent(){
-			float c = 1.5;
+			float c = 0.05;
 
 			if(parent->total_cnt == 0 || total_cnt == 0){
 				return 1 - win_rate();
