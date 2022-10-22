@@ -243,20 +243,15 @@ public:
 		}
 
 		node* expand_from_leaf(std::default_random_engine& engine){
-			board b = *this;
+			board b;
 			std::vector<int> vec = all_space(engine);
 			bool success_placed = 0;
 			int pos = -1;
-			std::vector<int> vec2;
+			
 			for(int i = 0; i < vec.size(); ++i){
-				if(((*this).child).count(vec[i]) == 0){
-					vec2.push_back(vec[i]);
-				}
-			}
-
-			for(int i = 0; i < vec2.size(); ++i){
-				if(b.place(vec2[i]) == board::legal){
-					pos = vec2[i];
+				b = *this;
+				if(b.place(vec[i]) == board::legal && (*this).child.count(vec[i]) == 0){
+					pos = vec[i];
 					success_placed = 1;
 					break;
 				}
