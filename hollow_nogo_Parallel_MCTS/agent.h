@@ -143,7 +143,8 @@ public:
 		int win_cnt;
 		int total_cnt;
 		int place_pos;
-		std::vector<node*> child;
+		//std::vector<node*> child;
+		std::unordered_map<int, node*> child;
 		node* parent;
 
 		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr) {}
@@ -209,11 +210,11 @@ public:
 
 			float max_score = -std::numeric_limits<float>::max();
 			node* c;
-			for(int i = 0; i < child.size(); ++i){
-				float tmp = child[i]->win_rate();
+			for(auto &ch : child){
+				float tmp = ch.second->win_rate();
 				if(tmp > max_score){
 					max_score = tmp;
-					c = child[i];
+					c = ch.second;
 				}
 			}
 			
@@ -231,18 +232,18 @@ public:
 				if(curr->child.size() == 0){
 					break;
 				}
-				for(int i = 0; i < curr->child.size(); ++i){
+				for(auto &curr_child : curr->child){
 					float tmp;
 					if(who == curr->info().who_take_turns){
-						tmp = curr->child[i]->ucb(ucb_c);
+						tmp = (curr_child.second)->ucb(ucb_c);
 					}else{
-						tmp = curr->child[i]->ucb_opponent(ucb_c);
+						tmp = (curr_child.second)->ucb_opponent(ucb_c);
 					}
-					
 					if(tmp > max_score){
 						max_score = tmp;
-						c = curr->child[i];
+						c = curr_child.second;
 					}
+
 				}
 				vec.push_back(c);
 				curr = c;
@@ -267,8 +268,10 @@ public:
 			std::vector<int> vec = all_space(engine);
 			bool success_placed = 0;
 			int pos = -1;
+
 			for(int i = 0; i < vec.size(); ++i){
-				if(b.place(vec[i]) == board::legal){
+				b = *this;
+				if(b.place(vec[i]) == board::legal && (*this).child.count(vec[i]) == 0){
 					pos = vec[i];
 					success_placed = 1;
 					break;
@@ -277,7 +280,8 @@ public:
 
 			if(success_placed){
 				node* new_node = new node(b, pos);
-				this->child.push_back(new_node);
+				//this->child.push_back(new_node);
+				this->child[pos] = new_node;
 				new_node->parent = this;
 				return new_node;
 			}else{
@@ -337,9 +341,9 @@ public:
 			return ;
 		}
 
-		for(int i = 0; i < root->child.size(); ++i){
-			if(root->child[i] != nullptr){
-				delete_tree(root->child[i]);
+		for(auto &c : root->child){
+			if(c.second != nullptr){
+				delete_tree(c.second);
 			}
 		}
 

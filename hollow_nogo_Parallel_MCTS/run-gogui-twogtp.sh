@@ -1,11 +1,11 @@
 #!/bin/bash
 echo "GoGui-TwoGTP Launcher V20211112"
 # commands for player 1
-P1B='./nogo --shell --name="Hollow-Black" --black="mcts N=1000 c=0.5"'
-P1W='./nogo --shell --name="Hollow-White" --white="mcts N=1000 c=0.5"'
+P1B='./nogo --shell --name="new-Hollow-Black" --black="mcts N=10000 c=0.5"'
+P1W='./nogo --shell --name="new-Hollow-White" --white="mcts N=10000 c=0.5"'
 # commands for local player 2
-P2B='./nogo --shell --name="Hollow-Black" --black="mcts N=1000 c=0.1"'
-P2W='./nogo --shell --name="Hollow-White" --white="mcts N=1000 c=0.1"'
+P2B='./nogo --shell --name="Hollow-Black" --black="mcts N=10000 c=0.5"'
+P2W='./nogo --shell --name="Hollow-White" --white="mcts N=10000 c=0.5"'
 # commands for local judge
 #P2B='./nogo-judge --shell --name="Black" --black="weak"'
 #P2W='./nogo-judge --shell --name="White" --white="weak"'
@@ -14,7 +14,7 @@ P2W='./nogo --shell --name="Hollow-White" --white="mcts N=1000 c=0.1"'
 #P2W="gogui-client tcglinux1 10000"
 
 # other settings
-games=${1:-10} # total games to play
+games=${1:-50} # total games to play
 timelimit=36 # total thinking time in second
 configs="-size 9 -komi 0 -auto -games $((games/2)) -verbose" # gogui-twogtp
 
