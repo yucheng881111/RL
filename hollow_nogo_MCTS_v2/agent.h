@@ -122,7 +122,7 @@ public:
 		node(const board& state, int m = -1): board(state), place_pos(m), win_cnt(0), total_cnt(0), parent(nullptr) {}
 
 		float win_rate(){
-			if(win_cnt == 0 && total_cnt == 0){
+			if(total_cnt == 0){
 				return 0.0;
 			}
 			
@@ -137,16 +137,6 @@ public:
 			}
 
 			return win_rate() + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
-		}
-
-		float ucb_opponent(){
-			float c = 0.5;
-
-			if(parent->total_cnt == 0 || total_cnt == 0){
-				return 1 - win_rate();
-			}
-			
-			return (1 - win_rate()) + c * std::sqrt(std::log(parent->total_cnt) / total_cnt);
 		}
 
 		int MCTS(int N, std::default_random_engine& engine){
@@ -212,12 +202,7 @@ public:
 				}
 				
 				for(auto &curr_child : curr->child){
-					float tmp;
-					if(who == curr->info().who_take_turns){
-						tmp = curr_child.second->ucb();
-					}else{
-						tmp = curr_child.second->ucb_opponent();
-					}
+					float tmp = curr_child.second->ucb();
 					if(tmp > max_score){
 						max_score = tmp;
 						c = curr_child.second;
@@ -308,8 +293,10 @@ public:
 		void back_propagate(std::vector<node*>& path, unsigned winner){
 			for(int i = 0; i < path.size(); ++i){
 				path[i]->total_cnt++;
-				if(winner == info().who_take_turns){
+				if(winner != (path[i]->info()).who_take_turns){
 					path[i]->win_cnt++;
+				} else {
+					path[i]->win_cnt--;
 				}
 			}
 		}

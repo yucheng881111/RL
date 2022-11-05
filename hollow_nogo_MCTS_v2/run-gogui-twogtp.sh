@@ -1,14 +1,14 @@
 #!/bin/bash
 echo "GoGui-TwoGTP Launcher V20211112"
 # commands for player 1
-P1B='./nogo --shell --name="Hollow-Black" --black="mcts N=1000"'
-P1W='./nogo --shell --name="Hollow-White" --white="mcts N=1000"'
+P1B='./nogo --shell --name="new-Hollow-Black" --black="mcts N=100"'
+P1W='./nogo --shell --name="new-Hollow-White" --white="mcts N=100"'
 # commands for local player 2
-#P2B='./nogo-judge --shell --name="Normal-Black" --black="weak"'
-#P2W='./nogo-judge --shell --name="Normal-White" --white="weak"'
+P2B='./nogo-judge --shell --name="Normal-Black" --black="weak"'
+P2W='./nogo-judge --shell --name="Normal-White" --white="weak"'
 # commands for local random player
-P2B='../hollow_nogo_MCTS_v2/nogo --shell --name="v2-Black" --black="mcts N=1000"'
-P2W='../hollow_nogo_MCTS_v2/nogo --shell --name="v2-White" --white="mcts N=1000"'
+#P2B='/home/yucheng/桌面/RL/hollow_nogo_MCTS/nogo --shell --name="Random-Black" --black="mcts N=10000"'
+#P2W='/home/yucheng/桌面/RL/hollow_nogo_MCTS/nogo --shell --name="Random-White" --white="mcts N=10000"'
 # commands for remote player 2
 #P2B="gogui-client tcglinux1 10000"
 #P2W="gogui-client tcglinux1 10000"
